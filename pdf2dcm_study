@@ -208,8 +208,10 @@ declare CurrentDate
 declare CurrentTime
 declare CurrentDateTime
 
-printf -v CurrentDate '%(%Y%m%d)T' -1
-printf -v CurrentTime '%(%H%M%S)T' -1
+# use date rather than in-built printf formatting of date/time to be compatible
+# with bash version <4.2 i.e. as found in MacOS
+CurrentDate=$(date '+%Y%m%d')
+CurrentTime=$(date '+%H%M%S')
 printf -v CurrentDateTime '%s%s' "${CurrentDate}" "${CurrentTime}"
 
 # get type 2 attributes from reference DICOM file
