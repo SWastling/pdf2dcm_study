@@ -208,9 +208,7 @@ declare CurrentDate
 declare CurrentTime
 declare CurrentDateTime
 
-#EDV 20240403 Amended for macos
-#printf -v CurrentDate '%(%Y%m%d)T' -1
-#printf -v CurrentTime '%(%H%M%S)T' -1
+#EDV 20240403 Added modification for MacOs
 case "$OSTYPE" in
   darwin*)
     CurrentDate=$(date '+%Y%m%d')
