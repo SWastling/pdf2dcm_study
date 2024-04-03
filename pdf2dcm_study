@@ -1,36 +1,36 @@
 #!/usr/bin/env bash
 
 ###############################
-# Read a PDF file, convert it to a DICOM 
-# Encapsulated PDF Storage SOP instance and 
+# Read a PDF file, convert it to a DICOM
+# Encapsulated PDF Storage SOP instance and
 # store the converted data to an output file using
-# pdf2dcm from DCMTK - 
+# pdf2dcm from DCMTK -
 # https://support.dcmtk.org/docs/pdf2dcm.html
-#                                                                        
-# Author: Stephen Wastling 
+#
+# Author: Stephen Wastling
 # Acknowledgements: Maciej Radzikowski for the
-# Bash script template  
+# Bash script template
 # https://betterdev.blog/minimal-safe-bash-script-template/
 # and the DCMTK developers
 ###############################
 
 # -E - ensure ERR trap is handled correctly
 # -e - exit immediately when a command fails
-# -o pipefail - set the exit code of a pipeline to 
-# that of the rightmost command to exit with a 
-# non-zero status, or to zero if all commands of 
+# -o pipefail - set the exit code of a pipeline to
+# that of the rightmost command to exit with a
+# non-zero status, or to zero if all commands of
 # the pipeline exit successfully.
-# -u - treat unset variables as an error and exit 
+# -u - treat unset variables as an error and exit
 # immediately
 set -Eeuo pipefail
 
-# expand patterns that don't match files to the 
-# null string instead of returning a sting 
+# expand patterns that don't match files to the
+# null string instead of returning a sting
 #containing the pattern search for
 shopt -s nullglob
 
-# run the cleanup function (defined below) if 
-# SIGINT, SIGTERM, ERR or EXIT signals are 
+# run the cleanup function (defined below) if
+# SIGINT, SIGTERM, ERR or EXIT signals are
 # received
 trap cleanup SIGINT SIGTERM ERR EXIT
 
@@ -65,7 +65,7 @@ EOF
 }
 
 ###############################
-# Reset SIGINT, SIGTERM, ERR and EXIT 
+# Reset SIGINT, SIGTERM, ERR and EXIT
 # signals to their initial values
 ###############################
 cleanup() {
@@ -85,7 +85,7 @@ setup_colors() {
     # set color variable if:
     # stderr is connected to the terminal AND
     # NO_COLOR is empty AND
-    # terminal is NOT dumb 
+    # terminal is NOT dumb
     NOFORMAT='\033[0m' RED='\033[0;31m'
   else
     NOFORMAT='' RED=''
@@ -93,14 +93,14 @@ setup_colors() {
 }
 
 ###############################
-# Send command output to standard error 
+# Send command output to standard error
 # Globals:
 # Outputs: message to stderr
 ###############################
 msg() {
-  # -e option enables interpretation of backslash 
+  # -e option enables interpretation of backslash
   # escapes
-  # when using set -u option "${1-}" is needed to 
+  # when using set -u option "${1-}" is needed to
   # ensure no error if $1 is unset
   echo >&2 -e "${1-}"
 }
@@ -132,7 +132,7 @@ parse_params() {
     -?*) die "Unknown option: $1" ;; # exit if given unknow optional argument
     *) break ;; # collect up the postional arguments
     esac # end of case statement
-    shift 
+    shift
   done
 
   # put all arguments from command line into an
@@ -140,8 +140,8 @@ parse_params() {
   args=("$@")
 
   # check if five required arguments were given
-  # by the user, if not display the script usage and 
-  # exit. Here ${#args[@]} means the number of 
+  # by the user, if not display the script usage and
+  # exit. Here ${#args[@]} means the number of
   # elements in args array
   [[ ${#args[@]} -ne 5 ]] && usage
 
@@ -162,8 +162,8 @@ get_val(){
   local -r kn="${2}"
   local d
   local kv
-  d=$(dcmdump "${fn}" +P "${kn}" -s) 
-  
+  d=$(dcmdump "${fn}" +P "${kn}" -s)
+
   if [[ "${d}" =~ (no value available) ]]; then
     # when the tag is present but empty
     kv=""
@@ -208,8 +208,21 @@ declare CurrentDate
 declare CurrentTime
 declare CurrentDateTime
 
-printf -v CurrentDate '%(%Y%m%d)T' -1
-printf -v CurrentTime '%(%H%M%S)T' -1
+#EDV 20240403 Amended for macos
+#printf -v CurrentDate '%(%Y%m%d)T' -1
+#printf -v CurrentTime '%(%H%M%S)T' -1
+case "$OSTYPE" in
+  darwin*)
+    CurrentDate=$(date '+%Y%m%d')
+    CurrentTime=$(date '+%H%M%S'.000000)
+  ;;
+  #linux*)   echo "LINUX" ;;
+  *)
+    printf -v CurrentDate '%(%Y%m%d)T' -1
+    printf -v CurrentTime '%(%H%M%S)T' -1
+  ;;
+esac
+
 printf -v CurrentDateTime '%s%s' "${CurrentDate}" "${CurrentTime}"
 
 # get type 2 attributes from reference DICOM file
@@ -244,4 +257,3 @@ PatientWeight=$(get_val "${dcmfile_ref}" "PatientWeight")
 
 # encapsulate PDF file
 pdf2dcm --title "${doc_title}" --study-from "${dcmfile_ref}" --instance-one -k "StudyDate"="${StudyDate}" -k "SeriesDate"="${CurrentDate}" -k "ContentDate"="${CurrentDate}" -k "AcquisitionDateTime"="${CurrentDateTime}" -k "StudyTime"="${StudyTime}" -k "SeriesTime"="${CurrentTime}" -k "ContentTime"="${CurrentTime}" -k "AccessionNumber"="${AccessionNumber}" -k "Manufacturer"="${Manufacturer}" -k "InstitutionName"="${InstitutionName}" -k "InstitutionAddress"="${InstitutionAddress}" -k "ReferringPhysicianName"="${ReferringPhysicianName}" -k "StationName"="${StationName}" -k "StudyDescription"="${StudyDescription}" -k "SeriesDescription"="${doc_title}" -k "ManufacturerModelName"="${ManufacturerModelName}" -k "IssuerOfPatientID"="${PDF2DCM_ISSUEROFPATIENTID}" -k "PatientAge"="${PatientAge}" -k "PatientWeight"="${PatientWeight}" -k "ProtocolName"="${doc_title}" -k "StudyID"="${StudyID}" -k "SeriesNumber"="${series_num}" "${pdffile_in}" "${dcmfile_out}"
-
